@@ -5,17 +5,16 @@ from scipy.interpolate import interp1d
 from datetime import datetime, timedelta
 from src.data_manager import carregar_dados_reais
 from quadrant_config import get_quadrant_config
+from src.utils import parse_date, format_date
 
 def plotar_evolucao_peso():
     """Função para plotar a evolução do peso."""
-    # Import local para y_plan se necessário
-    from quadrant_config import get_quadrant_config
-
-    # Ajustar soma para ~43kg
-    target_total = 43
-    scale_factor = target_total / np.sum(y_plan[1:])
-    y_curve *= scale_factor
-    y_plan_adjusted = y_plan.copy()
+    # Obter configuração unificada
+    config = get_quadrant_config()
+    x_points = config['x_points']
+    y_plan = config['y_plan']
+    dias_por_quadrante = config['dias_por_quadrante']
+    data_inicio_padrao = config['data_inicio_padrao']
 
     # Quadrante 0 = ponto zero (0kg)
     y_plan_adjusted[0] = 0
@@ -31,11 +30,21 @@ def plotar_evolucao_peso():
     accum_real = np.cumsum(y_real)
     x_real = np.arange(len(y_real))
 
-    # Data de início
-    if isinstance(dados["data_inicio"], str):
-        data_inicio = datetime.strptime(dados["data_inicio"], "%Y-%m-%d")
-    else:
-        data_inicio = data_inicio_padrao
+    # Data de início usando parse_date unificado
+    dados = carregar_dados_reais()
+    peso_inicial = dados["peso_inicial"]
+    y_real = dados["dados_reais"]
+    
+    data_inicio = parse_date(dados.get("data_inicio", data_inicio_padrao))
+
+    # Usar format_date para rótulos consistentes
+    datas_formatadas = []
+    dias_acumulados = [0]
+    for i in range(1, 15):
+        if i < len(dias_por_quadrante):
+            dias_acumulados.append(dias_acumulados[-1] + dias_por_quadrante[i])
+            nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
+            datas_formatadas.append(format_date(nova_data, "short"))    
 
     # Projeção Corrigida
     x_proj = []
