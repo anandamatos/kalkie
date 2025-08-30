@@ -1,4 +1,27 @@
 _gitignore/
+
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+# Jupyter
 .ipynb_checkpoints/
-__pycache__
-.gitignore
+.DS_Store
+
+# Ambiente virtual
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+Thumbs.db
