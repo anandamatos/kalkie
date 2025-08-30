@@ -1,26 +1,14 @@
-# Imports padrão da biblioteca
 import numpy as np
-from datetime import datetime
-
-# Imports de módulos de dados
+from src.utils import format_date, data_hoje  # ← ADICIONAR import
 from src.data_manager import carregar_dados_reais
-
-# Imports de módulos de cálculo
 from src.calculator import calcular_desvio_acumulado, calcular_meta_proximo_quadrante
 from src.diet_plan import calcular_plano
-from src.calisthenics_calc import calculadora_calistenia
-
-# Imports de módulos de UI
 from src.plot_generator import plotar_evolucao_peso
-
-# Imports de configuração (última camada)
-from quadrant_config import get_quadrant_config, y_plan
+from src.calisthenics_calc import calculadora_calistenia
+from src.quadrant_config import get_quadrant_config, y_plan
 
 def executar_programa_principal():
     """Executa o programa principal."""
-    # Obter configuração unificada
-    config = get_quadrant_config()
-    y_plan = config['y_plan']
     try:
         # Carregar dados atuais
         dados = carregar_dados_reais()
@@ -42,7 +30,7 @@ def executar_programa_principal():
         perda_real_quad = dados_reais[6] if 6 < len(dados_reais) else 0
         
         print(f"\n📊 Status Atual: Quadrante 6 | Peso Atual: {peso_atual:.1f}kg")
-        print(f"📅 Data atual: {datetime.now().strftime('%d/%m/%Y')}")
+        print(f"📅 Data atual: {format_date(data_hoje(), 'display')}")  # ← Usar format_date unificado
         print(f"⚠️ Desvio acumulado: {desvio:.1f}kg")
         
         # Verificar se o desvio é alto (≥25%)
@@ -141,5 +129,7 @@ def executar_programa_principal():
             print(f"🔥 TOTAL: {total:.1f} kcal {status}")
             print(f"   (Exerc. {exerc:.1f} + Alim. {aliment:.1f} | Meta: {meta:.1f} kcal)")
         
-    except ValueError as e:
-        print(f"Erro: {e}")
+    except Exception as e:
+        print(f"❌ Erro não esperado: {e}")
+        import traceback
+        traceback.print_exc()

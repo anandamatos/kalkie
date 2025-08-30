@@ -1,41 +1,40 @@
-# NOVO src/diet_plan.py (versão corrigida)
+from datetime import timedelta
+from src.utils import (
+    parse_date, format_date, calcular_data_inicio_quadrante as calc_data_utils,
+    gerar_datas_periodo, obter_dia_semana_ptbr, arredondar_500
+)
 from src.activity_planner import determinar_fase, calcular_atividades_base, ajustar_karate, calcular_meta_karate_diaria
+from quadrant_config import get_quadrant_config
 from src.data_manager import carregar_dados_reais
 from src.calculator import calcular_desvio_acumulado
 from src.constants import KCAL_POR_KG, MAX_DEFICIT_ALIMENTAR, AGUA_Q10, KCAL_BIKE
-from quadrant_config import get_quadrant_config
-from src.utils import (  # ← ADICIONAR imports unificados
-    parse_date, format_date, calcular_data_inicio_quadrante,
-    gerar_datas_periodo, obter_dia_semana_ptbr, arredondar_500
-)
 
-def calcular_data_inicio_quadrante(quadrante):
-    """Calcula a data de início correta para cada quadrante."""
+def obter_data_inicio_quadrante(quadrante):
+    """Calcula a data de início correta para cada quadrante usando função unificada."""
     dados = carregar_dados_reais()
+    config = get_quadrant_config()
+    dias_config = config['dias_por_quadrante']
     
-    if isinstance(dados["data_inicio"], str):
-        data_inicio = datetime.strptime(dados["data_inicio"], "%Y-%m-%d")
-    else:
-        data_inicio = datetime.strptime(data_inicio_padrao, "%Y-%m-%d")
+    data_inicio = parse_date(dados.get("data_inicio", config['data_inicio_padrao']))
     
-    # Calcular dias acumulados até o início do quadrante
-    dias_acumulados = sum(dias_por_quadrante[1:quadrante])
-    return data_inicio + timedelta(days=dias_acumulados)
+    return calc_data_utils(data_inicio, quadrante, dias_config)
 
 def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
     """Calcula plano detalhado para o quadrante especificado."""
+    # Importar y_plan dentro da função para evitar problemas de escopo
+    from src.quadrant_config import y_plan
+    
     # Obter configuração unificada
     config = get_quadrant_config()
     dias_por_quadrante = config['dias_por_quadrante']
     data_inicio_padrao = config['data_inicio_padrao']
     
-    # Configurar data de início usando função unificada
+    # Configurar data de início
     if quadrante == 0:
         fase = "EMERGÊNCIA"
         desvio_acumulado = 0
         if not all([meta_kg, dias, data_inicio_quad]):
             raise ValueError("Para emergência, informe meta_kg, dias e data_inicio_quad")
-        data_inicio_quad = parse_date(data_inicio_quad)
     else:
         if quadrante < 1 or quadrante > 14:
             raise ValueError("Quadrante deve estar entre 1-14")
@@ -43,12 +42,19 @@ def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
         fase = determinar_fase(quadrante)
         dias = dias_por_quadrante[quadrante]
         
-        # Usar função unificada para calcular data de início
-        data_inicio_quad = calcular_data_inicio_quadrante(
-            data_inicio_padrao, quadrante, dias_por_quadrante
-        )
+        # Se não foi fornecida meta, calcular com base nos desvio
+        if meta_kg is None:
+            desvio_acumulado = calcular_desvio_acumulado(quadrante - 1)
+            meta_kg = y_plan[quadrante] + desvio_acumulado
+        else:
+            desvio_acumulado = meta_kg - y_plan[quadrante]
     
-    # ... restante do código permanece igual ...
+    # Configurar data de início
+    if quadrante == 0:
+        data_inicio_quad = parse_date(data_inicio_quad)
+    else:
+        data_inicio_quad = obter_data_inicio_quadrante(quadrante)
+    
     # Cálculos de déficit
     total_kcal = meta_kg * KCAL_POR_KG
     deficit_diario = arredondar_500(total_kcal / dias)
@@ -62,25 +68,21 @@ def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
     
     queima_necessaria = max(0, deficit_diario - deficit_alimentacao)
     
-    # Configurar datas usando função unificada
+    # Configurar datas e dias da semana
     datas = gerar_datas_periodo(data_inicio_quad, dias)
     dias_semana = [obter_dia_semana_ptbr(data) for data in datas]
-    tradutor_dias = {
-        "Monday": "segunda", "Tuesday": "terça", "Wednesday": "quarta",
-        "Thursday": "quinta", "Friday": "sexta", "Saturday": "sábado",
-        "Sunday": "domingo"
-    }
-    dias_semana = [tradutor_dias[dia] for dia in dias_semana]
     
     # Calcular plano diário
     planos = []
     for i, data in enumerate(datas):
-        # Usar format_date para exibição consistente
-        data_formatada = format_date(data, "display")
+        # 1. Atividades base
+        plano_dia = calcular_atividades_base(quadrante if quadrante > 0 else 5)
+        total_exerc = sum(kcal for _, _, kcal in plano_dia)
+        deficit_restante = max(0, queima_necessaria - total_exerc)
         
-        planos.append((
-            data_formatada,  # ← Já formatado para exibição
-            dias_semana[i],
+        # 2. Ajustar karatê
+        kcal_karate, plano_dia = ajustar_karate(
+            dias_semana[i], 
             quadrante, 
             plano_dia,
             deficit_restante
@@ -112,7 +114,7 @@ def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
         total_deficit = total_exerc + deficit_alimentacao
         
         planos.append((
-            data.strftime("%d/%m/%Y"),
+            format_date(data, "display"),
             dias_semana[i],
             plano_dia,
             atividades_complementares,
@@ -126,7 +128,7 @@ def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
         "quadrante": quadrante,
         "fase": fase,
         "dias": dias,
-        "inicio": format_date(data_inicio_quad, "display"),  # 
+        "inicio": format_date(data_inicio_quad, "display"),
         "meta_kg": round(meta_kg, 2),
         "desvio_kg": round(desvio_acumulado, 2) if quadrante > 0 else 0,
         "total_kcal": total_kcal,

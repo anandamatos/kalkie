@@ -1,11 +1,10 @@
-# src/plot_generator.py
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from datetime import datetime, timedelta
+from datetime import timedelta
+from src.utils import parse_date, format_date  # ← ADICIONAR import
 from src.data_manager import carregar_dados_reais
-from quadrant_config import get_quadrant_config
-from src.utils import parse_date, format_date
+from src.quadrant_config import get_quadrant_config
 
 def plotar_evolucao_peso():
     """Função para plotar a evolução do peso."""
@@ -15,6 +14,20 @@ def plotar_evolucao_peso():
     y_plan = config['y_plan']
     dias_por_quadrante = config['dias_por_quadrante']
     data_inicio_padrao = config['data_inicio_padrao']
+
+    # Pontos Planejado
+    x_curve = np.linspace(0, 14, 430)
+    
+    def f(x):
+        return 0.6 * (10 ** (x / 14))
+    
+    y_curve = f(x_curve)
+
+    # Ajustar soma para ~43kg
+    target_total = 43
+    scale_factor = target_total / np.sum(y_plan[1:])
+    y_curve *= scale_factor
+    y_plan_adjusted = y_plan.copy()
 
     # Quadrante 0 = ponto zero (0kg)
     y_plan_adjusted[0] = 0
@@ -31,10 +44,6 @@ def plotar_evolucao_peso():
     x_real = np.arange(len(y_real))
 
     # Data de início usando parse_date unificado
-    dados = carregar_dados_reais()
-    peso_inicial = dados["peso_inicial"]
-    y_real = dados["dados_reais"]
-    
     data_inicio = parse_date(dados.get("data_inicio", data_inicio_padrao))
 
     # Usar format_date para rótulos consistentes
@@ -64,22 +73,22 @@ def plotar_evolucao_peso():
 
     # Calcular dias acumulados por fase
     dias_acumulados = [0]
-    datas_formatadas = [data_inicio.strftime('%d/%m/%y')]
+    datas_formatadas = [format_date(data_inicio, 'short')]  # ← Usar format_date unificado
 
     for i in range(1, 4):
         dias_acumulados.append(dias_acumulados[-1] + 5)
         nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(nova_data.strftime('%d/%m/%y'))
+        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
 
     for i in range(4, 8):
         dias_acumulados.append(dias_acumulados[-1] + 7)
         nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(nova_data.strftime('%d/%m/%y'))
+        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
 
     for i in range(8, 15):
         dias_acumulados.append(dias_acumulados[-1] + 10)
         nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(nova_data.strftime('%d/%m/%y'))
+        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
 
     # PLOTAGEM
     plt.figure(figsize=(16, 9))
