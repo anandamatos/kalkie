@@ -1,6 +1,5 @@
 # NOVO src/diet_plan.py (versão corrigida)
 from datetime import datetime, timedelta
-from src.calculator import arredondar_500
 from src.activity_planner import determinar_fase, calcular_atividades_base, ajustar_karate, calcular_meta_karate_diaria
 from src.data_manager import carregar_dados_reais
 from src.calculator import calcular_desvio_acumulado
@@ -22,10 +21,8 @@ def calcular_data_inicio_quadrante(quadrante):
 
 def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
     """Calcula plano detalhado para o quadrante especificado."""
-    # Obter configuração unificada
-    config = get_quadrant_config()
-    dias_por_quadrante = config['dias_por_quadrante']
-    data_inicio_padrao = config['data_inicio_padrao']
+    # Import local para quebrar possível ciclo
+    from src.utils import arredondar_500
     
     # Configurar data de início
     if quadrante == 0:

@@ -1,12 +1,20 @@
-# src/main.py
-import numpy as np  # ← ADICIONAR ESTA LINHA
+# Imports padrão da biblioteca
+import numpy as np
+from datetime import datetime
+
+# Imports de módulos de dados
 from src.data_manager import carregar_dados_reais
+
+# Imports de módulos de cálculo
 from src.calculator import calcular_desvio_acumulado, calcular_meta_proximo_quadrante
 from src.diet_plan import calcular_plano
-from src.plot_generator import plotar_evolucao_peso
 from src.calisthenics_calc import calculadora_calistenia
-from quadrant_config import get_quadrant_config
-from datetime import datetime
+
+# Imports de módulos de UI
+from src.plot_generator import plotar_evolucao_peso
+
+# Imports de configuração (última camada)
+from quadrant_config import get_quadrant_config, y_plan
 
 def executar_programa_principal():
     """Executa o programa principal."""

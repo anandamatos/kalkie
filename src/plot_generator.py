@@ -8,12 +8,8 @@ from quadrant_config import get_quadrant_config
 
 def plotar_evolucao_peso():
     """Função para plotar a evolução do peso."""
-    # Obter configuração unificada
-    config = get_quadrant_config()
-    x_points = config['x_points']
-    y_plan = config['y_plan']
-    dias_por_quadrante = config['dias_por_quadrante']
-    data_inicio_padrao = config['data_inicio_padrao']
+    # Import local para y_plan se necessário
+    from quadrant_config import get_quadrant_config
 
     # Ajustar soma para ~43kg
     target_total = 43

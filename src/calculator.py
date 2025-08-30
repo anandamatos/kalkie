@@ -1,9 +1,7 @@
 import numpy as np
 from src.data_manager import carregar_dados_reais
 from src.quadrant_config import y_plan
-
-def arredondar_500(valor):
-    return round(valor / 500) * 500
+from src.utils import arredondar_500
 
 def calcular_desvio_acumulado(quadrante_atual):
     """Calcula o desvio acumulado com base nos dados reais."""
