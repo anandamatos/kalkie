@@ -1,3 +1,4 @@
 _gitignore/
 .ipynb_checkpoints/
+__pycache__
 .gitignore
