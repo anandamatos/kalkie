@@ -1,4 +1,5 @@
 # src/main.py
+import numpy as np  # ← ADICIONAR ESTA LINHA
 from src.data_manager import carregar_dados_reais
 from src.calculator import calcular_desvio_acumulado, calcular_meta_proximo_quadrante
 from src.diet_plan import calcular_plano
