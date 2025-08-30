@@ -5,11 +5,14 @@ from src.calculator import calcular_desvio_acumulado, calcular_meta_proximo_quad
 from src.diet_plan import calcular_plano
 from src.plot_generator import plotar_evolucao_peso
 from src.calisthenics_calc import calculadora_calistenia
-from src.quadrant_config import y_plan
+from quadrant_config import get_quadrant_config
 from datetime import datetime
 
 def executar_programa_principal():
     """Executa o programa principal."""
+    # Obter configuração unificada
+    config = get_quadrant_config()
+    y_plan = config['y_plan']
     try:
         # Carregar dados atuais
         dados = carregar_dados_reais()

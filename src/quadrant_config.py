@@ -1,6 +1,22 @@
 # src/quadrant_config.py
 import numpy as np
 
+def validar_configuracao_quadrantes(config):
+    """Valida a configuração de quadrantes (movida para evitar ciclo de imports)."""
+    required_keys = ['x_points', 'y_plan', 'dias_por_quadrante', 'data_inicio_padrao']
+    
+    for key in required_keys:
+        if key not in config:
+            raise ValueError(f"Configuração inválida: falta chave '{key}'")
+    
+    if len(config['x_points']) != len(config['y_plan']):
+        raise ValueError("x_points e y_plan devem ter o mesmo tamanho")
+    
+    if len(config['dias_por_quadrante']) != 15:
+        raise ValueError("dias_por_quadrante deve ter 15 elementos")
+    
+    return True
+
 def configurar_quadrantes():
     """Configura dias e metas por quadrante."""
     def f(x):
@@ -23,6 +39,25 @@ def configurar_quadrantes():
     
     return x_points, y_plan, dias_por_quadrante
 
-# Configura quadrantes
-x_points, y_plan, dias_por_quadrante = configurar_quadrantes()
-data_inicio_padrao = "2025-07-20"
+def get_quadrant_config():
+    """Retorna configuração unificada de quadrantes."""
+    x_points, y_plan, dias_por_quadrante = configurar_quadrantes()
+    
+    config = {
+        'x_points': x_points,
+        'y_plan': y_plan,
+        'dias_por_quadrante': dias_por_quadrante,
+        'data_inicio_padrao': "2025-07-20"
+    }
+    
+    # Validar configuração
+    validar_configuracao_quadrantes(config)
+    
+    return config
+
+# Manter compatibilidade com imports existentes
+config = get_quadrant_config()
+x_points = config['x_points']
+y_plan = config['y_plan']
+dias_por_quadrante = config['dias_por_quadrante']
+data_inicio_padrao = config['data_inicio_padrao']

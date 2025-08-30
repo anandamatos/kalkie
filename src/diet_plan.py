@@ -2,10 +2,10 @@
 from datetime import datetime, timedelta
 from src.calculator import arredondar_500
 from src.activity_planner import determinar_fase, calcular_atividades_base, ajustar_karate, calcular_meta_karate_diaria
-from src.quadrant_config import dias_por_quadrante, data_inicio_padrao
 from src.data_manager import carregar_dados_reais
 from src.calculator import calcular_desvio_acumulado
 from src.constants import KCAL_POR_KG, MAX_DEFICIT_ALIMENTAR, AGUA_Q10, KCAL_BIKE
+from quadrant_config import get_quadrant_config
 
 def calcular_data_inicio_quadrante(quadrante):
     """Calcula a data de início correta para cada quadrante."""
@@ -22,8 +22,10 @@ def calcular_data_inicio_quadrante(quadrante):
 
 def calcular_plano(quadrante, meta_kg=None, dias=None, data_inicio_quad=None):
     """Calcula plano detalhado para o quadrante especificado."""
-    # Importar y_plan dentro da função para evitar problemas de escopo
-    from src.quadrant_config import y_plan
+    # Obter configuração unificada
+    config = get_quadrant_config()
+    dias_por_quadrante = config['dias_por_quadrante']
+    data_inicio_padrao = config['data_inicio_padrao']
     
     # Configurar data de início
     if quadrante == 0:

@@ -4,17 +4,16 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from datetime import datetime, timedelta
 from src.data_manager import carregar_dados_reais
-from src.quadrant_config import y_plan, dias_por_quadrante, data_inicio_padrao, x_points  # ← ADICIONAR x_points aqui
+from quadrant_config import get_quadrant_config
 
 def plotar_evolucao_peso():
     """Função para plotar a evolução do peso."""
-    # Pontos Planejado
-    x_curve = np.linspace(0, 14, 430)
-    
-    def f(x):
-        return 0.6 * (10 ** (x / 14))
-    
-    y_curve = f(x_curve)
+    # Obter configuração unificada
+    config = get_quadrant_config()
+    x_points = config['x_points']
+    y_plan = config['y_plan']
+    dias_por_quadrante = config['dias_por_quadrante']
+    data_inicio_padrao = config['data_inicio_padrao']
 
     # Ajustar soma para ~43kg
     target_total = 43
