@@ -1,49 +1,74 @@
 import json
+import logging
 from src.utils import parse_date, format_date
+from src.validation import validar_arquivo_json, validar_dados_completos
+
+logger = logging.getLogger(__name__)
 
 def carregar_dados_reais():
-    """Carrega dados reais do arquivo JSON."""
-    dados_padrao = {
-        "peso_inicial": 112.4,
-        "dados_reais": [0, 1.7, -1.3, 2, -1.1, 2.8, -0.7],
-        "quadrante_atual": 6,
-        "data_inicio": "2025-07-20"  # ← Manter como string ISO
-    }
-    
+    """Carrega e valida dados reais do arquivo JSON."""
     try:
-        with open('../data/dados_reais.json', 'r') as f:
-            dados = json.load(f)
-            if len(dados["dados_reais"]) < 7:
-                dados["dados_reais"] = dados_padrao["dados_reais"]
-            
-            # Garantir que data_inicio está no formato correto usando função unificada
-            if 'data_inicio' in dados:
-                try:
-                    # Validar e formatar corretamente a data
-                    dados['data_inicio'] = format_date(parse_date(dados['data_inicio']), "iso")
-                except ValueError:
-                    # Se falhar, usar data padrão
-                    dados['data_inicio'] = dados_padrao['data_inicio']
-            else:
-                dados['data_inicio'] = dados_padrao['data_inicio']
-                
-            return dados
-    except FileNotFoundError:
-        return dados_padrao
-    except Exception as e:
-        print(f"Erro ao carregar dados: {e}")
-        return dados_padrao
-
-def salvar_dados_reais(dados):
-    """Salva dados reais no arquivo JSON."""
-    try:
-        # Garantir formato ISO antes de salvar usando função unificada
+        dados = validar_arquivo_json('../data/dados_reais.json')
+        
+        # Garantir que data_inicio está no formato ISO
         if 'data_inicio' in dados:
             dados['data_inicio'] = format_date(dados['data_inicio'], "iso")
         
-        with open('../data/dados_reais.json', 'w') as f:
-            json.dump(dados, f, indent=2)
-        return True
+        logger.info("Dados carregados e validados com sucesso")
+        return dados
+        
     except Exception as e:
-        print(f"Erro ao salvar dados: {e}")
+        logger.error(f"Erro crítico ao carregar dados: {e}")
+        # Fallback para dados padrão validados
+        return validar_dados_completos({})
+
+def salvar_dados_reais(dados):
+    """Salva dados reais no arquivo JSON com validação."""
+    try:
+        # Validar dados antes de salvar
+        dados_validados = validar_dados_completos(dados)
+        
+        # Garantir formato ISO para data
+        if 'data_inicio' in dados_validados:
+            dados_validados['data_inicio'] = format_date(dados_validados['data_inicio'], "iso")
+        
+        with open('../data/dados_reais.json', 'w', encoding='utf-8') as f:
+            json.dump(dados_validados, f, indent=2, ensure_ascii=False)
+        
+        logger.info("Dados salvos com sucesso")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Erro ao salvar dados: {e}")
+        return False
+
+def adicionar_registro_peso(peso: float, quadrante: int):
+    """Adiciona um novo registro de peso ao histórico."""
+    try:
+        dados = carregar_dados_reais()
+        
+        # Inicializar histórico se não existir
+        if 'historico_pesos' not in dados:
+            dados['historico_pesos'] = []
+        
+        # Adicionar novo registro
+        novo_registro = {
+            'data': format_date(datetime.now(), "iso"),
+            'peso': float(peso),
+            'quadrante': int(quadrante)
+        }
+        
+        # Validar o novo registro
+        from src.validation import validar_objeto, HISTORICO_PESO_SCHEMA
+        registro_validado = validar_objeto(novo_registro, HISTORICO_PESO_SCHEMA)
+        
+        dados['historico_pesos'].append(registro_validado)
+        
+        # Manter apenas os últimos 100 registros
+        dados['historico_pesos'] = dados['historico_pesos'][-100:]
+        
+        return salvar_dados_reais(dados)
+        
+    except Exception as e:
+        logger.error(f"Erro ao adicionar registro de peso: {e}")
         return False

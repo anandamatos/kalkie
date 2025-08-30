@@ -1,6 +1,5 @@
-# src/quadrant_config.py
-import numpy as np
-from src.utils import validar_configuracao_quadrantes
+import numpy as np  # ← ADICIONAR ESTA LINHA
+from src.utils import validar_configuracao_quadrantes  # ← CORRIGIDO
 
 def configurar_quadrantes():
     """Configura dias e metas por quadrante."""
