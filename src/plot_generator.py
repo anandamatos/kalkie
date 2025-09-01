@@ -99,13 +99,18 @@ def plotar_evolucao_peso():
     ax.axvspan(3, 7, color='blue', alpha=0.2, lw=0)
     ax.axvspan(7, 14.5, color='purple', alpha=0.2, lw=0)
 
-    max_y = max(accum_plan.max(), accum_real.max() if len(y_real) > 0 else 0) + 5
-    plt.text(1.5, max_y, '5 dias/quad', ha='center', va='bottom', 
-             color='darkgreen', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
-    plt.text(5, max_y, '7 dias/quad', ha='center', va='bottom',
-             color='darkblue', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
-    plt.text(10.5, max_y, '10 dias/quad', ha='center', va='bottom',
-             color='purple', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    # No plot_generator.py - Ajustar coordenadas Y dos textos
+    max_y = max(accum_plan.max(), accum_real.max() if len(y_real) > 0 else 0) + 3  # Reduzir margem
+
+    # Ajustar posicionamento vertical
+    text_y_position = max_y - 2  # 1 unidade abaixo do topo
+
+    plt.text(1.5, text_y_position, '5 dias/quad', ha='center', va='bottom', 
+            color='darkgreen', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    plt.text(5, text_y_position, '7 dias/quad', ha='center', va='bottom',
+            color='darkblue', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    plt.text(10.5, text_y_position, '10 dias/quad', ha='center', va='bottom',
+            color='purple', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
 
     # Projeção Corrigida
     if len(y_proj) > 0 and ponto_esperado is not None:
@@ -138,19 +143,26 @@ def plotar_evolucao_peso():
     x_tick_labels = []
     for i in range(len(accum_plan)):
         if i == 0:
-            main_label = f'Q{i}\\nP:0.0/{peso_inicial:.1f}\\nD:0'
+            main_label = f'Q{i}\nP:0.0/{peso_inicial:.1f}\nD:0'
         else:
             peso_projetado = peso_inicial - accum_plan[i]
-            main_label = f'Q{i}\\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\\nD:{dias_acumulados[i]}'
+            main_label = f'Q{i}\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\nD:{dias_acumulados[i]}'
         x_tick_labels.append(main_label)
 
     ax.set_xticks(x_points)
-    ax.set_xticklabels(x_tick_labels, fontsize=9)
+    ax.set_xticklabels(x_tick_labels, fontsize=8)
 
-    # Adicionar rótulos de data
+    # Configurar posições Y para cada linha
+    line1_y = -7.0    # Linha principal (já está nos ticklabels)
+    line4_y = -6   # Datas na quarta linha
+
+    # Adicionar rótulos de data na posição correta
     for i in range(1, len(x_points)):
-        ax.text(x_points[i] - 0.2, -7.0, datas_formatadas[i], 
-                rotation=30, ha='left', va='top', fontsize=10, color='black')
+        ax.text(x_points[i] - 0.2, line4_y, datas_formatadas[i], 
+                rotation=30, ha='left', va='top', fontsize=8, color='black')
+
+    # Ajustar limites do gráfico
+    plt.ylim(-16, max_y)
 
     # Configurações finais
     plt.ylabel('Perda de Peso Acumulada (kg)')
@@ -158,6 +170,8 @@ def plotar_evolucao_peso():
     plt.xlim(-0.5, 14.5)
     plt.ylim(-3, max_y)
     plt.grid(True, linestyle='--', alpha=0.6, color='gray')
-    plt.legend()
+    # Mover legenda para canto inferior direito
+    plt.legend(loc='lower right', bbox_to_anchor=(0.99, 0.02), 
+            fancybox=False, shadow=False, ncol=1)
     plt.tight_layout()
     plt.show()
