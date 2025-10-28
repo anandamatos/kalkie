@@ -1,0 +1,14 @@
+{
+  "peso_inicial": 111.0,
+  "dados_reais": [
+    0,
+    1.7,
+    -1.3,
+    2,
+    -1.1,
+    2.8,
+    -0.7
+  ],
+  "quadrante_atual": 6,
+  "data_inicio": "2025-10-20"
+}

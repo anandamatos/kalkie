@@ -16,8 +16,8 @@ def validar_configuracao_quadrantes(config):
     if len(config['x_points']) != len(config['y_plan']):
         raise ValueError("x_points e y_plan devem ter o mesmo tamanho")
     
-    if len(config['dias_por_quadrante']) != 15:
-        raise ValueError("dias_por_quadrante deve ter 15 elementos")
+    if len(config['dias_por_quadrante']) != len(config['x_points']):
+        raise ValueError("dias_por_quadrante deve ter o mesmo número de elementos que x_points (quadrantes)")
     
     return True
 

@@ -1,0 +1,19 @@
+{
+  "data_inicio_padrao": "2025-10-20",
+  "data_fim": "2025-12-31",
+  "target_total": 12.0,
+  "num_groups": 3,
+  "total_quadrants": 10,
+  "dias_por_quadrante": [
+    0,
+    7,
+    7,
+    8,
+    7,
+    7,
+    9,
+    9,
+    9,
+    9
+  ]
+}

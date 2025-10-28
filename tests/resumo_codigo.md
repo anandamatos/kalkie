@@ -1,0 +1,2 @@
+# 🎯 RESUMO DO CÓDIGO KALKIE
+

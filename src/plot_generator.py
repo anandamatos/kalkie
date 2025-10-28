@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from datetime import timedelta
-from src.utils import parse_date, format_date  # ← ADICIONAR import
+from src.utils import parse_date, format_date
 from src.data_manager import carregar_dados_reais
 from src.quadrant_config import get_quadrant_config
 
@@ -16,15 +16,17 @@ def plotar_evolucao_peso():
     data_inicio_padrao = config['data_inicio_padrao']
 
     # Pontos Planejado
-    x_curve = np.linspace(0, 14, 430)
-    
+    last_x = x_points[-1]
+    x_curve = np.linspace(0, last_x, 430)
+
     def f(x):
-        return 0.6 * (10 ** (x / 14))
-    
+        # denom = last_x
+        return 0.6 * (10 ** (x / max(1, last_x)))
+
     y_curve = f(x_curve)
 
-    # Ajustar soma para ~43kg
-    target_total = 43
+    # Ajustar soma para target_total vindo da config
+    target_total = config.get('target_total', 43)
     scale_factor = target_total / np.sum(y_plan[1:])
     y_curve *= scale_factor
     y_plan_adjusted = y_plan.copy()
@@ -40,6 +42,11 @@ def plotar_evolucao_peso():
     dados = carregar_dados_reais()
     peso_inicial = dados["peso_inicial"]
     y_real = dados["dados_reais"]
+    
+    # Se não houver dados reais (Q0), inicializar com zero
+    if not y_real:
+        y_real = [0.0]  # Começa em Q0 com perda zero
+        
     accum_real = np.cumsum(y_real)
     x_real = np.arange(len(y_real))
 
@@ -47,57 +54,57 @@ def plotar_evolucao_peso():
     data_inicio = parse_date(dados.get("data_inicio", data_inicio_padrao))
 
     # Usar format_date para rótulos consistentes
-    datas_formatadas = []
     dias_acumulados = [0]
-    for i in range(1, 15):
-        if i < len(dias_por_quadrante):
-            dias_acumulados.append(dias_acumulados[-1] + dias_por_quadrante[i])
-            nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-            datas_formatadas.append(format_date(nova_data, "short"))    
+    datas_formatadas = [format_date(data_inicio, 'short')]
+    # construir acumulado a partir do dias_por_quadrante (compatível com total de quadrantes)
+    for i in range(1, len(x_points)):
+        dias_acumulados.append(dias_acumulados[-1] + (dias_por_quadrante[i] if i < len(dias_por_quadrante) else 0))
+        nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
+        datas_formatadas.append(format_date(nova_data, 'short'))
 
     # Projeção Corrigida
     x_proj = []
     y_proj = []
     ponto_esperado = None
-    if len(y_real) > 0:
+    
+    # Se estiver em Q0 (apenas um valor e é zero), mostrar projeção do início
+    if len(y_real) == 1 and y_real[0] == 0:
+        # Projeção começa do zero
+        mask = x_curve >= 0
+        x_proj = x_curve[mask]
+        y_proj = accum_curve[mask]
+        ponto_esperado = (0, 0)  # Ponto inicial em Q0
+    elif len(y_real) > 0:
+        # Projeção normal para quadrantes após Q0
         last_real_value = accum_real[-1]
-        
         f_interp = interp1d(accum_curve, x_curve, kind='linear', fill_value="extrapolate")
         x_esperado = f_interp(last_real_value)
-        
         mask = x_curve <= x_esperado
         x_proj = x_curve[mask]
         y_proj = accum_curve[mask]
-        
         ponto_esperado = (x_esperado, last_real_value)
 
-    # Calcular dias acumulados por fase
-    dias_acumulados = [0]
-    datas_formatadas = [format_date(data_inicio, 'short')]  # ← Usar format_date unificado
-
-    for i in range(1, 4):
-        dias_acumulados.append(dias_acumulados[-1] + 5)
-        nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
-
-    for i in range(4, 8):
-        dias_acumulados.append(dias_acumulados[-1] + 7)
-        nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
-
-    for i in range(8, 15):
-        dias_acumulados.append(dias_acumulados[-1] + 10)
-        nova_data = data_inicio + timedelta(days=dias_acumulados[-1])
-        datas_formatadas.append(format_date(nova_data, 'short'))  # ← Usar format_date unificado
+    # (já construímos datas_formatadas acima usando dias_por_quadrante)
 
     # PLOTAGEM
     plt.figure(figsize=(16, 9))
     ax = plt.gca()
 
     # Fases coloridas no fundo
-    ax.axvspan(-0.5, 3, color='green', alpha=0.2, lw=0)
-    ax.axvspan(3, 7, color='blue', alpha=0.2, lw=0)
-    ax.axvspan(7, 14.5, color='purple', alpha=0.2, lw=0)
+    # Fases coloridas no fundo - determinar spans com base em dias/quadrantes
+    # tentar mapear 3 fases a partir de dias_por_quadrante se possível
+    try:
+        # detectar pontos de mudança de fase por valor distinto em dias_por_quadrante
+        # fallback: dividir em três blocos proporcionais
+        n = len(x_points)
+        third = max(1, n // 3)
+        ax.axvspan(-0.5, third - 0.5, color='green', alpha=0.2, lw=0)
+        ax.axvspan(third - 0.5, 2 * third - 0.5, color='blue', alpha=0.2, lw=0)
+        ax.axvspan(2 * third - 0.5, last_x + 0.5, color='purple', alpha=0.2, lw=0)
+    except Exception:
+        ax.axvspan(-0.5, last_x / 3, color='green', alpha=0.2, lw=0)
+        ax.axvspan(last_x / 3, 2 * last_x / 3, color='blue', alpha=0.2, lw=0)
+        ax.axvspan(2 * last_x / 3, last_x + 0.5, color='purple', alpha=0.2, lw=0)
 
     # No plot_generator.py - Ajustar coordenadas Y dos textos
     max_y = max(accum_plan.max(), accum_real.max() if len(y_real) > 0 else 0) + 3  # Reduzir margem
@@ -139,14 +146,15 @@ def plotar_evolucao_peso():
             plt.text(x_real[i], val + 0.3, f'{val:.1f}', color='red', fontsize=8,
                      ha='center', va='bottom', weight='bold', zorder=3)
 
-    # Eixo X com rótulos principais
+    # Eixo X com rótulos principais (usar acumulados de dias)
     x_tick_labels = []
     for i in range(len(accum_plan)):
         if i == 0:
             main_label = f'Q{i}\nP:0.0/{peso_inicial:.1f}\nD:0'
         else:
             peso_projetado = peso_inicial - accum_plan[i]
-            main_label = f'Q{i}\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\nD:{dias_acumulados[i]}'
+            dias_label = dias_acumulados[i] if i < len(dias_acumulados) else 0
+            main_label = f'Q{i}\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\nD:{dias_label}'
         x_tick_labels.append(main_label)
 
     ax.set_xticks(x_points)
@@ -166,8 +174,13 @@ def plotar_evolucao_peso():
 
     # Configurações finais
     plt.ylabel('Perda de Peso Acumulada (kg)')
-    plt.title(f'Evolução do Peso - Início: {peso_inicial}kg | Atual: {peso_inicial - accum_real[-1]:.1f}kg' if len(y_real) > 0 else f'Evolução do Peso - Início: {peso_inicial}kg')
-    plt.xlim(-0.5, 14.5)
+    # Título mostra peso atual apenas se não estiver em Q0
+    if len(y_real) > 1:  # Se tem mais que um registro
+        plt.title(f'Evolução do Peso - Início: {peso_inicial}kg | Atual: {peso_inicial - accum_real[-1]:.1f}kg')
+    else:
+        plt.title(f'Evolução do Peso - Início: {peso_inicial}kg')
+    
+    plt.xlim(-0.5, last_x + 0.5)
     plt.ylim(-3, max_y)
     plt.grid(True, linestyle='--', alpha=0.6, color='gray')
     # Mover legenda para canto inferior direito
