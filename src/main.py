@@ -55,8 +55,9 @@ def executar_programa_principal():
         print("0. Setup do programa")
         print(f"1. Avançar para Quadrante {quadrante_atual + 1}")
         print("2. Visualizar gráfico de evolução")
-        print("3. Entrar em modo emergência")
-        print("4. Calculadora de Calistenia")
+        print("3. Entrar em modo emergencia")
+        print("4. Plano de Treinamento")
+        print("5. Calculadora de Calistenia")
 
         opcao = int(input("\nEscolha uma opção: "))
 
@@ -194,27 +195,65 @@ def executar_programa_principal():
                 print(f"❌ Falha ao executar setup: {e}")
             return executar_programa_principal()
 
-        elif opcao == 3:  # Renumerado de 4 para 3
-            print("\n🚨 PROTOCOLO DE EMERGÊNCIA ATIVADO 🚨")
-            hoje = datetime.now().strftime("%d/%m/%Y")
-            print(f"📅 Data de início: {hoje} (hoje)")
+        elif opcao == 3:  # Avançar ao próximo quadrante (protocolo rápido)
+            # Calcular automaticamente a meta necessária para avançar ao próximo quadrante
+            try:
+                proximo_quadrante = quadrante_atual + 1
+                meta_kg_auto = calcular_meta_proximo_quadrante(quadrante_atual)
+                hoje = datetime.now().strftime("%d/%m/%Y")
+                print(f"\n➡️ Para avançar de Q{quadrante_atual} para Q{proximo_quadrante} você precisa perder ~{meta_kg_auto:.2f} kg")
+                print(f"📅 Data de início: {hoje} (hoje)")
+                dias_emergencia = int(input("Informe o número de dias para atingir essa meta: "))
 
-            meta_kg_emergencia = float(input("Informe a meta de kg a perder: "))
-            dias_emergencia = int(input("Informe o número de dias para atingir a meta: "))
+                res = calcular_plano(
+                    quadrante=proximo_quadrante,
+                    meta_kg=meta_kg_auto,
+                    dias=dias_emergencia,
+                    data_inicio_quad=datetime.now()
+                )
+            except Exception as e:
+                print(f"Erro ao calcular plano rápido: {e}")
+                # fallback: pedir entrada manual como antes
+                try:
+                    meta_kg_emergencia = float(input("Informe a meta de kg a perder: "))
+                    dias_emergencia = int(input("Informe o número de dias para atingir a meta: "))
+                    res = calcular_plano(
+                        quadrante=0,
+                        meta_kg=meta_kg_emergencia,
+                        dias=dias_emergencia,
+                        data_inicio_quad=datetime.now()
+                    )
+                except Exception as e2:
+                    print(f"Operação cancelada: {e2}")
+                    return executar_programa_principal()
 
-            res = calcular_plano(
-                quadrante=0,
-                meta_kg=meta_kg_emergencia,
-                dias=dias_emergencia,
-                data_inicio_quad=datetime.now()
-            )
+        elif opcao == 4:
+            # Plano de Treinamento: listar atividades físicas necessárias para avançar
+            try:
+                from src import activity_planner
+                dados = carregar_dados_reais()
+                proximo_quadrante = len(dados.get('dados_reais', []))
+                atividades = activity_planner.calcular_atividades_base(proximo_quadrante)
+                fase = activity_planner.determinar_fase(proximo_quadrante)
+                print(f"\n🏋️ Plano de Treinamento para avançar ao Quadrante {proximo_quadrante} (fase: {fase})")
+                total_kcal = 0
+                for nome, desc, kcal in atividades:
+                    print(f" - {nome}: {desc} = {kcal:.0f} kcal")
+                    try:
+                        total_kcal += float(kcal)
+                    except Exception:
+                        pass
+                print(f"\nTotal estimado calorias (atividades base): {total_kcal:.0f} kcal")
+            except Exception as e:
+                print(f"Erro ao gerar plano de treinamento: {e}")
+            return executar_programa_principal()
 
-        elif opcao == 4:  # Calculadora de Calistenia
+        elif opcao == 5:  # Calculadora de Calistenia
             calculadora_calistenia()
             return executar_programa_principal()  # Retorna ao menu principal
 
         else:
-            raise ValueError("Opção inválida. Deve ser 0, 1, 2, 4 ou 99.")
+            raise ValueError("Opção inválida. Deve ser 0, 1, 2, 3, 4, 5 ou 99.")
 
         # Exibir resultados resumidos e perguntar se usuário quer ver cálculos calóricos detalhados
         print(f"\n{'='*70}")
