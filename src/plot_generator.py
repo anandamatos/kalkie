@@ -93,31 +93,61 @@ def plotar_evolucao_peso():
     # Fases coloridas no fundo
     # Fases coloridas no fundo - determinar spans com base em dias/quadrantes
     # tentar mapear 3 fases a partir de dias_por_quadrante se possível
+    # Determine background phase spans by interpolating the accumulated planned
+    # losses (accum_plan) to find the x position where some kg targets are met.
+    # Green should end where planned cumulative reaches ~0.6kg (Q3 target),
+    # Blue should end where planned cumulative reaches ~1.4kg (Q6 target).
     try:
-        # detectar pontos de mudança de fase por valor distinto em dias_por_quadrante
-        # fallback: dividir em três blocos proporcionais
+        from scipy.interpolate import interp1d as _interp1d
+        interp_plan_to_x = _interp1d(accum_plan, x_points, kind='linear', fill_value='extrapolate')
+        # Prefer explicit Q2 boundary for the green background: end at the start of Q2
+        if len(x_points) > 2:
+            # end at the start of Q2, then extend visually by +0.5 to compensate
+            x_end_green = float(x_points[2]) - 0.5
+            x_end_green += 0.5  # visual compensation requested (+0.5)
+        else:
+            x_end_green = float(interp_plan_to_x(0.6)) if accum_plan[0] <= 0.6 else 0.0
+
+        # Prefer explicit Q4 boundary for the blue background when available.
+        # Apply a visual compensation of +1.2 as requested to make the blue fill reach Q4.
+        if len(x_points) > 4:
+            x_end_blue = float(x_points[4]) - 0.5 + 1.5
+        else:
+            x_end_blue = float(interp_plan_to_x(1.4)) if accum_plan[0] <= 1.4 else x_end_green + 1.0
+    except Exception:
+        # Fallback to thirds if interpolation fails
         n = len(x_points)
         third = max(1, n // 3)
-        ax.axvspan(-0.5, third - 0.5, color='green', alpha=0.2, lw=0)
-        ax.axvspan(third - 0.5, 2 * third - 0.5, color='blue', alpha=0.2, lw=0)
-        ax.axvspan(2 * third - 0.5, last_x + 0.5, color='purple', alpha=0.2, lw=0)
-    except Exception:
-        ax.axvspan(-0.5, last_x / 3, color='green', alpha=0.2, lw=0)
-        ax.axvspan(last_x / 3, 2 * last_x / 3, color='blue', alpha=0.2, lw=0)
-        ax.axvspan(2 * last_x / 3, last_x + 0.5, color='purple', alpha=0.2, lw=0)
+        x_end_green = third - 0.5
+        x_end_blue = 2 * third - 0.5
+
+    # Clamp spans within chart bounds
+    x_start = -0.5
+    x_end_green = max(x_start, min(x_end_green, last_x + 0.5))
+    x_end_blue = max(x_end_green, min(x_end_blue, last_x + 0.5))
+
+    ax.axvspan(x_start, x_end_green, color='green', alpha=0.2, lw=0)
+    ax.axvspan(x_end_green, x_end_blue, color='blue', alpha=0.2, lw=0)
+    ax.axvspan(x_end_blue, last_x + 0.5, color='purple', alpha=0.2, lw=0)
 
     # No plot_generator.py - Ajustar coordenadas Y dos textos
-    max_y = max(accum_plan.max(), accum_real.max() if len(y_real) > 0 else 0) + 3  # Reduzir margem
+    max_y = max(float(accum_plan.max()), float(accum_real.max() if len(y_real) > 0 else 0.0)) + 3.0
 
-    # Ajustar posicionamento vertical
-    text_y_position = max_y - 2  # 1 unidade abaixo do topo
+    # Place the top labels centered within each colored background span
+    # compute midpoints
+    green_mid = (x_start + x_end_green) / 2.0
+    blue_mid = (x_end_green + x_end_blue) / 2.0
+    purple_mid = (x_end_blue + (last_x + 0.5)) / 2.0
 
-    plt.text(1.5, text_y_position, '5 dias/quad', ha='center', va='bottom', 
-            color='darkgreen', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
-    plt.text(5, text_y_position, '7 dias/quad', ha='center', va='bottom',
-            color='darkblue', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
-    plt.text(10.5, text_y_position, '10 dias/quad', ha='center', va='bottom',
-            color='purple', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    # Ajustar posicionamento vertical ligeiramente abaixo do topo
+    text_y_position = max_y - 0.5
+
+    plt.text(green_mid, text_y_position, '5 dias/quad', ha='center', va='bottom',
+         color='darkgreen', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    plt.text(blue_mid, text_y_position, '7 dias/quad', ha='center', va='bottom',
+         color='darkblue', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
+    plt.text(purple_mid, text_y_position, '10 dias/quad', ha='center', va='bottom',
+         color='purple', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
 
     # Projeção Corrigida
     if len(y_proj) > 0 and ponto_esperado is not None:
@@ -149,28 +179,22 @@ def plotar_evolucao_peso():
     # Eixo X com rótulos principais (usar acumulados de dias)
     x_tick_labels = []
     for i in range(len(accum_plan)):
+        date_text = datas_formatadas[i] if i < len(datas_formatadas) else ''
         if i == 0:
-            main_label = f'Q{i}\nP:0.0/{peso_inicial:.1f}\nD:0'
+            # incluir Q0 e a data na linha abaixo do D
+            main_label = f'Q{i}\nP:0.0/{peso_inicial:.1f}\nD:0\n{date_text}'
         else:
             peso_projetado = peso_inicial - accum_plan[i]
             dias_label = dias_acumulados[i] if i < len(dias_acumulados) else 0
-            main_label = f'Q{i}\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\nD:{dias_label}'
+            main_label = f'Q{i}\nP:{accum_plan[i]:.1f}/{peso_projetado:.1f}\nD:{dias_label}\n{date_text}'
         x_tick_labels.append(main_label)
 
     ax.set_xticks(x_points)
     ax.set_xticklabels(x_tick_labels, fontsize=8)
 
-    # Configurar posições Y para cada linha
-    line1_y = -7.0    # Linha principal (já está nos ticklabels)
-    line4_y = -6   # Datas na quarta linha
+    # remover anotações separadas de data (agora estão dentro dos ticklabels)
 
-    # Adicionar rótulos de data na posição correta
-    for i in range(1, len(x_points)):
-        ax.text(x_points[i] - 0.2, line4_y, datas_formatadas[i], 
-                rotation=30, ha='left', va='top', fontsize=8, color='black')
-
-    # Ajustar limites do gráfico
-    plt.ylim(-16, max_y)
+    # Ajustar limites do gráfico (o limite inferior final será definido mais abaixo)
 
     # Configurações finais
     plt.ylabel('Perda de Peso Acumulada (kg)')
@@ -181,10 +205,17 @@ def plotar_evolucao_peso():
         plt.title(f'Evolução do Peso - Início: {peso_inicial}kg')
     
     plt.xlim(-0.5, last_x + 0.5)
-    plt.ylim(-3, max_y)
+    # Mostrar apenas 1 unidade abaixo de zero para evitar achatar a curva
+    plt.ylim(-1, max_y)
     plt.grid(True, linestyle='--', alpha=0.6, color='gray')
     # Mover legenda para canto inferior direito
     plt.legend(loc='lower right', bbox_to_anchor=(0.99, 0.02), 
             fancybox=False, shadow=False, ncol=1)
     plt.tight_layout()
+    # garantir espaço suficiente na parte inferior para os rótulos de data
+    try:
+        # ajustar bottom para o valor visto no print (aprox. 0.074) para encaixar os rótulos
+        plt.subplots_adjust(bottom=0.074)
+    except Exception:
+        pass
     plt.show()
